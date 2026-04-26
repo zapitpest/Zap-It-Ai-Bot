@@ -6,10 +6,11 @@ load_dotenv()
 # --- API Keys ---
 SM8_API_KEY = os.environ["Sm8"]
 SQUARE_API_KEY = os.environ["Square"]
-GORILLADESK_API_KEY = os.environ["Gorilladesk"]
-QUICKBOOKS_API_KEY = os.environ["Quickbooks"]
-GOHIGHLEVEL_API_KEY = os.environ["Gohighlevel"]
-FORMATIZE_API_KEY = os.environ["Formatize"]
+GORILLADESK_API_KEY = os.environ.get("Gorilladesk", "")
+QUICKBOOKS_API_KEY = os.environ.get("Quickbooks", "")
+GOHIGHLEVEL_API_KEY = os.environ.get("Gohighlevel", "")
+# Formatize is legacy invoicing — not used in active automations
+FORMATIZE_API_KEY = os.environ.get("Formatize", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")

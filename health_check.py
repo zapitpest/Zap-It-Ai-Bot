@@ -64,13 +64,8 @@ if ghl and "NEEDS" not in ghl:
 else:
     print(f"  [{SKIP}] GoHighLevel: no key set")
 
-# Formatize
-fmt = os.getenv("Formatize", "")
-if fmt and "NEEDS" not in fmt:
-    check("Formatize", "https://api.formatize.com.au/v1/invoices",
-          {"Authorization": f"Bearer {fmt}"})
-else:
-    print(f"  [{SKIP}] Formatize: no key set")
+# Formatize — legacy invoicing system, not used in active automations
+# print(f"  [{SKIP}] Formatize: not required")
 
 # GorillaDesk
 gd = os.getenv("Gorilladesk", "")
