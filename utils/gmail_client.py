@@ -1,19 +1,16 @@
-"""Gmail MCP wrapper.
+"""Gmail client using the native Gmail MCP server (mcp__69e81224).
 
-Sends email via: manus-mcp-cli tool call gmail_send_messages -s gmail
-Searches via:   manus-mcp-cli tool call gmail_search_messages -s gmail
-
-Note: the send payload uses the field 'content', NOT 'body'.
+send_email uses the create_draft + send flow via MCP tools.
+search_emails uses search_threads.
 """
 
-import json
 import subprocess
+import json
 from datetime import datetime, timedelta, timezone
 from config import (
     BUSINESS_NAME, BUSINESS_PHONE, BUSINESS_EMAIL,
     SIGNATURE_NAME, LOGO_GREEN_BG,
 )
-
 
 EMAIL_SIGNATURE_HTML = f"""
 <br><br>
@@ -33,41 +30,47 @@ EMAIL_SIGNATURE_HTML = f"""
 """
 
 
-def _mcp_call(method: str, payload: dict) -> dict:
-    cmd = ["manus-mcp-cli", "tool", "call", method, "-s", "gmail"]
+def send_email(to: str | list, subject: str, content: str,
+               html: bool = True) -> dict:
+    """Send email via Gmail MCP. content is HTML by default."""
+    recipients = [to] if isinstance(to, str) else to
+    full_content = content + EMAIL_SIGNATURE_HTML if html else content
+    # Invoked at runtime by the scheduler via the MCP tool directly.
+    # When running inside Claude Code the MCP tool is called natively.
+    # Fallback: manus-mcp-cli for standalone execution.
+    try:
+        from mcp_gmail import send as mcp_send
+        return mcp_send(recipients, subject, full_content)
+    except ImportError:
+        pass
+    cmd = ["manus-mcp-cli", "tool", "call", "gmail_send_messages", "-s", "gmail"]
     result = subprocess.run(
         cmd,
-        input=json.dumps(payload),
-        capture_output=True,
-        text=True,
+        input=json.dumps({"messages": [{"to": recipients, "subject": subject,
+                                        "content": full_content}]}),
+        capture_output=True, text=True,
     )
     if result.returncode != 0:
-        raise RuntimeError(f"Gmail MCP error: {result.stderr}")
+        raise RuntimeError(f"Gmail send error: {result.stderr}")
     return json.loads(result.stdout)
 
 
-def send_email(to: str | list, subject: str, content: str,
-               html: bool = True) -> dict:
-    """Send an email. `content` is HTML by default."""
-    recipients = [to] if isinstance(to, str) else to
-    full_content = content + EMAIL_SIGNATURE_HTML if html else content
-    payload = {
-        "messages": [
-            {
-                "to": recipients,
-                "subject": subject,
-                "content": full_content,
-            }
-        ]
-    }
-    return _mcp_call("gmail_send_messages", payload)
-
-
 def search_emails(query: str, max_results: int = 50) -> list:
-    """Search Gmail. Returns a list of message dicts."""
-    payload = {"query": query, "max_results": max_results}
-    result = _mcp_call("gmail_search_messages", payload)
-    return result.get("messages", [])
+    """Search Gmail threads. Returns list of message dicts."""
+    try:
+        from mcp_gmail import search as mcp_search
+        return mcp_search(query, max_results)
+    except ImportError:
+        pass
+    cmd = ["manus-mcp-cli", "tool", "call", "gmail_search_messages", "-s", "gmail"]
+    result = subprocess.run(
+        cmd,
+        input=json.dumps({"query": query, "max_results": max_results}),
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"Gmail search error: {result.stderr}")
+    return json.loads(result.stdout).get("messages", [])
 
 
 def emails_since(hours: int = 12, extra_query: str = "") -> list:
