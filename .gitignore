@@ -1,4 +1,5 @@
 .env
+env-builder.html
 __pycache__/
 *.pyc
 *.pyo
