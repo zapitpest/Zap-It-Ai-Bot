@@ -15,6 +15,9 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1")
+MANUS_API_KEY = os.environ.get("MANUS_API_KEY", "")
+MANUS_API_BASE = os.environ.get("MANUS_API_BASE", "https://api.manus.ai/v1")
+MANUS_AGENT_ID = os.environ.get("MANUS_AGENT_ID", "")
 
 # --- ServiceM8 ---
 SM8_BASE_URL = "https://api.servicem8.com/api_1.0"

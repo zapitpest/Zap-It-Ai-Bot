@@ -1,5 +1,7 @@
 .env
 env-builder.html
+manus_prefs.json
+.qb_tokens.json
 __pycache__/
 *.pyc
 *.pyo

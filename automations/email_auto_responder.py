@@ -16,6 +16,7 @@ from utils.email_classifier import (
     is_real_estate, is_skip, is_work_order, extract_address, extract_sender_name,
 )
 from utils import ai_client
+from utils import manus_client
 from config import BUSINESS_EMAIL
 
 logger = logging.getLogger(__name__)
@@ -75,11 +76,18 @@ def run() -> None:
             continue
 
         try:
-            ai_body = ai_client.generate_work_order_response(
+            # Try Manus first (uses learned style preferences), then Claude, then template
+            ai_body = manus_client.suggest_email_response(
                 sender_name=sender_name,
                 property_address=address,
                 company_name=company_name,
             )
+            if not ai_body:
+                ai_body = ai_client.generate_work_order_response(
+                    sender_name=sender_name,
+                    property_address=address,
+                    company_name=company_name,
+                )
             if ai_body:
                 content = f"Hi {sender_name},<br><br>{ai_body}<br><br>Kind regards,"
                 send_email(sender_email, f"Work Order Received — {address}", content)
