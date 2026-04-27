@@ -8,6 +8,7 @@ Automation schedule:
   Unresponded Email Follow-Up 7:00 AM & 7:00 PM   (cron: 0 7,19 * * *)
   Google Sheet SM8 Sync      8:00 PM Mon/Wed/Fri   (cron: 0 20 * * 1,3,5)
   Treatment Flyer Send       Every hour (after SM8) (interval: 3600s, offset 30m)
+  CRM Sync (SM8 → GHL)       9:00 AM daily        (cron: 0 9 * * *)
 
 All times are Melbourne local time (Australia/Melbourne).
 """
@@ -25,6 +26,7 @@ from automations.afternoon_email_summary import run as afternoon_summary
 from automations.google_sheet_sm8_sync import run as sheet_sm8_sync
 from automations.email_auto_responder import run as auto_responder
 from automations.unresponded_email_followup import run as followup_check
+from automations.crm_sync import run as crm_sync
 from send_flyers import run as send_flyers
 
 logging.basicConfig(
@@ -86,6 +88,10 @@ schedule.every(1).hours.do(
 
 schedule.every(1).hours.do(
     lambda: _safe_run("Treatment Flyer Send", send_flyers, hours=2)
+)
+
+schedule.every().day.at("09:00").do(
+    lambda: _safe_run("CRM Sync (SM8 → GHL)", crm_sync)
 )
 
 

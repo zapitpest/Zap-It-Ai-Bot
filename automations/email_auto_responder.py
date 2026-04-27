@@ -11,10 +11,11 @@ import logging
 import os
 from datetime import datetime, timezone, timedelta
 
-from utils.gmail_client import search_emails, send_work_order_response
+from utils.gmail_client import search_emails, send_work_order_response, send_email
 from utils.email_classifier import (
     is_real_estate, is_skip, is_work_order, extract_address, extract_sender_name,
 )
+from utils import ai_client
 from config import BUSINESS_EMAIL
 
 logger = logging.getLogger(__name__)
@@ -67,17 +68,28 @@ def run() -> None:
         address = extract_address(body) or "the property"
         sender_name = extract_sender_name(email)
         sender_email = _parse_email_address(email.get("from", ""))
+        company_name = _parse_display_name(email.get("from", ""))
 
         if not sender_email:
             logger.warning("Could not parse sender address from: %s", email.get("from"))
             continue
 
         try:
-            send_work_order_response(sender_email, sender_name, address)
+            ai_body = ai_client.generate_work_order_response(
+                sender_name=sender_name,
+                property_address=address,
+                company_name=company_name,
+            )
+            if ai_body:
+                content = f"Hi {sender_name},<br><br>{ai_body}<br><br>Kind regards,"
+                send_email(sender_email, f"Work Order Received — {address}", content)
+                logger.info("Sent AI-generated response to %s re: %s", sender_email, address)
+            else:
+                send_work_order_response(sender_email, sender_name, address)
+                logger.info("Sent template response to %s re: %s", sender_email, address)
+
             responded.add(thread_id)
             newly_responded += 1
-            logger.info("Auto-responded to work order from %s re: %s",
-                        sender_email, address)
         except Exception as exc:
             logger.error("Failed to send auto-response to %s: %s", sender_email, exc)
 
@@ -94,6 +106,15 @@ def _parse_email_address(from_str: str) -> str:
         return match.group(1)
     if "@" in from_str:
         return from_str.strip()
+    return ""
+
+
+def _parse_display_name(from_str: str) -> str:
+    """Extract the display name (company/person) from a From header."""
+    import re
+    match = re.match(r'^"?([^"<]+)"?\s*<', from_str)
+    if match:
+        return match.group(1).strip()
     return ""
 
 
