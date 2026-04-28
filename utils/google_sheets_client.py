@@ -1,4 +1,6 @@
-"""Google Sheets client using the gws CLI tool.
+"""Google Sheets client — two-layer fallback:
+  1. gws CLI tool (legacy Manus / MCP environment)
+  2. Direct Sheets API via Google OAuth (standalone — run setup_google_auth.py first)
 
 The commercial clients sheet ID: 1dDZdZ01d5MjdwYkfwxHgNvFisa1wQL_ReWZYR6RJZ7o
 Tab: "Commercial Clients"
@@ -33,8 +35,11 @@ Column mapping (0-indexed):
 """
 
 import json
+import logging
 import subprocess
 from config import COMMERCIAL_SHEET_ID, COMMERCIAL_SHEET_TAB
+
+logger = logging.getLogger(__name__)
 
 COL = {
     "client_id": 0,
@@ -66,31 +71,71 @@ COL = {
 }
 
 
-def _gws(args: list) -> str:
-    result = subprocess.run(
-        ["gws"] + args,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"gws error: {result.stderr}")
-    return result.stdout.strip()
+def _sheets_service():
+    """Build and return an authenticated Sheets API service."""
+    from googleapiclient.discovery import build
+    from utils.google_oauth import get_credentials
+    return build("sheets", "v4", credentials=get_credentials())
+
+
+def _gws_read(sheet_id: str, range_str: str) -> list:
+    """Try gws CLI first, fall back to direct Sheets API."""
+    try:
+        result = subprocess.run(
+            ["gws", "read", sheet_id, range_str],
+            capture_output=True, text=True, timeout=20,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return json.loads(result.stdout.strip())
+    except FileNotFoundError:
+        pass
+    except Exception as exc:
+        logger.warning("gws read failed: %s", exc)
+
+    # Direct API fallback
+    svc = _sheets_service()
+    resp = svc.spreadsheets().values().get(
+        spreadsheetId=sheet_id, range=range_str
+    ).execute()
+    return resp.get("values", [])
+
+
+def _gws_write(sheet_id: str, range_str: str, value: str) -> None:
+    """Try gws CLI first, fall back to direct Sheets API."""
+    try:
+        result = subprocess.run(
+            ["gws", "write", sheet_id, range_str, value],
+            capture_output=True, text=True, timeout=20,
+        )
+        if result.returncode == 0:
+            return
+    except FileNotFoundError:
+        pass
+    except Exception as exc:
+        logger.warning("gws write failed: %s", exc)
+
+    # Direct API fallback
+    svc = _sheets_service()
+    svc.spreadsheets().values().update(
+        spreadsheetId=sheet_id,
+        range=range_str,
+        valueInputOption="USER_ENTERED",
+        body={"values": [[value]]},
+    ).execute()
 
 
 def read_sheet(sheet_id: str = COMMERCIAL_SHEET_ID,
                tab: str = COMMERCIAL_SHEET_TAB,
                range_: str = "A:Z") -> list[list]:
     """Return all rows as a list of lists (raw string values)."""
-    raw = _gws(["read", sheet_id, f"'{tab}'!{range_}"])
-    return json.loads(raw) if raw else []
+    return _gws_read(sheet_id, f"'{tab}'!{range_}")
 
 
 def update_cell(row: int, col_letter: str, value: str,
                 sheet_id: str = COMMERCIAL_SHEET_ID,
                 tab: str = COMMERCIAL_SHEET_TAB) -> None:
     """Update a single cell. row is 1-indexed."""
-    cell = f"'{tab}'!{col_letter}{row}"
-    _gws(["write", sheet_id, cell, value])
+    _gws_write(sheet_id, f"'{tab}'!{col_letter}{row}", value)
 
 
 def update_row_cells(row_index: int, updates: dict,

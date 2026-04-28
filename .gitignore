@@ -2,6 +2,8 @@
 env-builder.html
 manus_prefs.json
 .qb_tokens.json
+.google_token.json
+google_credentials.json
 __pycache__/
 *.pyc
 *.pyo
