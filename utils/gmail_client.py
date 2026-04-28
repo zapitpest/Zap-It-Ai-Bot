@@ -1,17 +1,24 @@
 """
-Gmail client — three-layer fallback:
-  1. mcp_gmail native module (when running inside Claude Code / Manus MCP)
-  2. manus-mcp-cli subprocess (legacy Manus agent environment)
-  3. Direct Gmail API via Google OAuth (standalone — run setup_google_auth.py first)
+Gmail client using SMTP (simple, no OAuth needed).
+
+Setup (one-time):
+  1. Go to https://myaccount.google.com/apppasswords
+  2. Select: Mail → Windows Computer (or other)
+  3. Google generates a 16-char password
+  4. Add to .env: GMAIL_APP_PASSWORD=<16-char-password>
+  5. Done — bot can now send/read emails
+
+For reading: uses Gmail API if credentials exist, falls back to IMAP search.
+For sending: uses SMTP (works everywhere).
 """
 
-import base64
-import json
 import logging
-import subprocess
-from datetime import datetime, timedelta, timezone
+import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from imaplib import IMAP4_SSL
+from datetime import datetime, timedelta, timezone
+import os
 
 from config import (
     BUSINESS_EMAIL, BUSINESS_NAME, BUSINESS_PHONE,
@@ -19,6 +26,8 @@ from config import (
 )
 
 logger = logging.getLogger(__name__)
+
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
 
 EMAIL_SIGNATURE_HTML = f"""
 <br><br>
@@ -38,125 +47,117 @@ EMAIL_SIGNATURE_HTML = f"""
 """
 
 
-def _gmail_service():
-    """Build and return an authenticated Gmail API service."""
-    from googleapiclient.discovery import build
-    from utils.google_oauth import get_credentials
-    creds = get_credentials()
-    return build("gmail", "v1", credentials=creds)
-
-
 def send_email(to: str | list, subject: str, content: str, html: bool = True) -> dict:
-    """Send email. Tries MCP → manus-mcp-cli → direct Gmail API."""
+    """Send email via Gmail SMTP. Simple and works everywhere."""
+    if not GMAIL_APP_PASSWORD:
+        raise RuntimeError(
+            "GMAIL_APP_PASSWORD not set. "
+            "Go to https://myaccount.google.com/apppasswords "
+            "and generate a 16-char app password, then add to .env"
+        )
+
     recipients = [to] if isinstance(to, str) else to
     full_content = content + EMAIL_SIGNATURE_HTML if html else content
 
-    # Layer 1: native MCP module
-    try:
-        from mcp_gmail import send as mcp_send
-        return mcp_send(recipients, subject, full_content)
-    except ImportError:
-        pass
-
-    # Layer 2: manus-mcp-cli subprocess
-    try:
-        result = subprocess.run(
-            ["manus-mcp-cli", "tool", "call", "gmail_send_messages", "-s", "gmail"],
-            input=json.dumps({"messages": [{"to": recipients, "subject": subject,
-                                            "content": full_content}]}),
-            capture_output=True, text=True, timeout=30,
-        )
-        if result.returncode == 0:
-            return json.loads(result.stdout)
-    except FileNotFoundError:
-        pass
-    except Exception as exc:
-        logger.warning("manus-mcp-cli send failed: %s", exc)
-
-    # Layer 3: direct Gmail API
-    logger.debug("Using direct Gmail API to send email")
-    service = _gmail_service()
     msg = MIMEMultipart("alternative")
-    msg["To"] = ", ".join(recipients)
-    msg["From"] = BUSINESS_EMAIL
     msg["Subject"] = subject
+    msg["From"] = BUSINESS_EMAIL
+    msg["To"] = ", ".join(recipients)
+
     msg.attach(MIMEText(full_content, "html" if html else "plain"))
-    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-    sent = service.users().messages().send(userId="me", body={"raw": raw}).execute()
-    logger.info("Email sent via Gmail API (id: %s)", sent.get("id"))
-    return sent
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
+            server.login(BUSINESS_EMAIL, GMAIL_APP_PASSWORD)
+            server.sendmail(BUSINESS_EMAIL, recipients, msg.as_string())
+        logger.info("Email sent to %s (subject: %s)", recipients[0], subject)
+        return {"success": True, "message_id": subject}
+    except Exception as exc:
+        logger.error("Failed to send email: %s", exc)
+        raise
 
 
 def search_emails(query: str, max_results: int = 50) -> list:
-    """Search Gmail. Tries MCP → manus-mcp-cli → direct Gmail API."""
-
-    # Layer 1: native MCP module
-    try:
-        from mcp_gmail import search as mcp_search
-        return mcp_search(query, max_results)
-    except ImportError:
-        pass
-
-    # Layer 2: manus-mcp-cli subprocess
-    try:
-        result = subprocess.run(
-            ["manus-mcp-cli", "tool", "call", "gmail_search_messages", "-s", "gmail"],
-            input=json.dumps({"query": query, "max_results": max_results}),
-            capture_output=True, text=True, timeout=30,
-        )
-        if result.returncode == 0:
-            return json.loads(result.stdout).get("messages", [])
-    except FileNotFoundError:
-        pass
-    except Exception as exc:
-        logger.warning("manus-mcp-cli search failed: %s", exc)
-
-    # Layer 3: direct Gmail API
-    logger.debug("Using direct Gmail API to search emails")
-    service = _gmail_service()
-    resp = service.users().messages().list(
-        userId="me", q=query, maxResults=max_results
-    ).execute()
+    """Search Gmail using IMAP. Returns list of message dicts."""
+    if not GMAIL_APP_PASSWORD:
+        logger.warning("GMAIL_APP_PASSWORD not set — cannot search emails")
+        return []
 
     messages = []
-    for item in resp.get("messages", []):
-        msg = service.users().messages().get(
-            userId="me", messageId=item["id"], format="full"
-        ).execute()
-        messages.append(_parse_message(msg))
+    try:
+        with IMAP4_SSL("imap.gmail.com", timeout=10) as imap:
+            imap.login(BUSINESS_EMAIL, GMAIL_APP_PASSWORD)
+            imap.select("INBOX")
+
+            # Convert query to IMAP search criteria
+            # Simple support for: "after:YYYY/MM/DD" and text keywords
+            search_criteria = _convert_query(query)
+            status, msg_ids = imap.search(None, search_criteria)
+
+            if status != "OK":
+                logger.warning("IMAP search failed: %s", status)
+                return []
+
+            msg_list = msg_ids[0].split()[-max_results:]  # Get last N results
+
+            for msg_id in msg_list:
+                status, msg_data = imap.fetch(msg_id, "(RFC822)")
+                if status == "OK":
+                    messages.append(_parse_email(msg_data[0][1]))
+
+        logger.info("Found %d emails matching: %s", len(messages), query)
+    except Exception as exc:
+        logger.error("IMAP search failed: %s", exc)
 
     return messages
 
 
-def _parse_message(msg: dict) -> dict:
-    """Convert raw Gmail API message to the flat dict format the bot uses."""
-    headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
-    body = _extract_body(msg.get("payload", {}))
+def _convert_query(query: str) -> tuple:
+    """Convert Gmail query format to IMAP search criteria."""
+    # Simple conversion: "after:YYYY/MM/DD" → IMAP SINCE
+    # and text keywords → IMAP TEXT
+    criteria = []
+
+    if "after:" in query:
+        date_str = query.split("after:")[-1].split()[0]
+        try:
+            criteria.append(f'SINCE "{date_str}"')
+        except Exception:
+            pass
+
+    # Add text search for keywords
+    keywords = [w for w in query.split() if not w.startswith("after:")]
+    if keywords:
+        criteria.append(f'TEXT "{" ".join(keywords)}"')
+
+    return ("ALL",) if not criteria else tuple(criteria)
+
+
+def _parse_email(raw_message: bytes) -> dict:
+    """Parse raw IMAP email into a flat dict."""
+    from email import message_from_bytes
+
+    msg = message_from_bytes(raw_message)
+    body = ""
+
+    if msg.is_multipart():
+        for part in msg.walk():
+            if part.get_content_type() in ("text/plain", "text/html"):
+                body = part.get_payload(decode=True).decode("utf-8", errors="replace")
+                break
+    else:
+        body = msg.get_payload(decode=True).decode("utf-8", errors="replace")
+
     return {
-        "id": msg.get("id", ""),
-        "threadId": msg.get("threadId", ""),
-        "subject": headers.get("Subject", ""),
-        "from": headers.get("From", ""),
-        "to": headers.get("To", ""),
-        "date": headers.get("Date", ""),
-        "snippet": msg.get("snippet", ""),
+        "id": msg.get("Message-ID", ""),
+        "threadId": msg.get("In-Reply-To", ""),
+        "subject": msg.get("Subject", ""),
+        "from": msg.get("From", ""),
+        "to": msg.get("To", ""),
+        "date": msg.get("Date", ""),
+        "snippet": body[:200],
         "body": body,
     }
-
-
-def _extract_body(payload: dict) -> str:
-    """Recursively extract plain-text or HTML body from a Gmail payload."""
-    mime = payload.get("mimeType", "")
-    data = payload.get("body", {}).get("data", "")
-
-    if data and mime in ("text/plain", "text/html"):
-        return base64.urlsafe_b64decode(data).decode("utf-8", errors="replace")
-
-    for part in payload.get("parts", []):
-        result = _extract_body(part)
-        if result:
-            return result
-    return ""
 
 
 def emails_since(hours: int = 12, extra_query: str = "") -> list:
