@@ -9,7 +9,7 @@ Usage:
 
 import json
 import logging
-from flask import Flask, request, jsonify, render_string_template
+from flask import Flask, request, jsonify
 from datetime import datetime
 import os
 import sys
