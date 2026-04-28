@@ -3,13 +3,15 @@ Zap It AI Bot — Main Scheduler
 
 Automation schedule:
   Morning Email Summary      7:00 AM daily        (cron: 0 7 * * *)
-  Afternoon Email Summary    5:00 PM daily         (cron: 0 17 * * *)
-  Email Auto-Responder       Every hour            (interval: 3600s)
-  Unresponded Email Follow-Up 7:00 AM & 7:00 PM   (cron: 0 7,19 * * *)
-  Google Sheet SM8 Sync      8:00 PM Mon/Wed/Fri   (cron: 0 20 * * 1,3,5)
-  Treatment Flyer Send       Every hour (after SM8) (interval: 3600s, offset 30m)
+  Afternoon Email Summary    5:00 PM daily        (cron: 0 17 * * *)
+  Email Auto-Responder       Every hour           (interval: 3600s)
+  Unresponded Email Follow-Up 7:00 AM & 7:00 PM  (cron: 0 7,19 * * *)
+  Google Sheet SM8 Sync      8:00 PM Mon/Wed/Fri  (cron: 0 20 * * 1,3,5)
+  CRM Sync (SM8 → GHL)       9:00 AM daily        (cron: 0 9 * * *)
+  Meta Ads Lead Sync         Every 30 minutes     (interval: 1800s)
 
 All times are Melbourne local time (Australia/Melbourne).
+Treatment Flyer Send is disabled for now (can be re-enabled anytime).
 """
 
 import logging
@@ -25,6 +27,8 @@ from automations.afternoon_email_summary import run as afternoon_summary
 from automations.google_sheet_sm8_sync import run as sheet_sm8_sync
 from automations.email_auto_responder import run as auto_responder
 from automations.unresponded_email_followup import run as followup_check
+from automations.crm_sync import run as crm_sync
+from automations.meta_lead_sync import run as meta_lead_sync
 from send_flyers import run as send_flyers
 
 logging.basicConfig(
@@ -84,8 +88,17 @@ schedule.every(1).hours.do(
     lambda: _safe_run("Email Auto-Responder", auto_responder)
 )
 
-schedule.every(1).hours.do(
-    lambda: _safe_run("Treatment Flyer Send", send_flyers, hours=2)
+# Flyer sending disabled for now
+# schedule.every(1).hours.do(
+#     lambda: _safe_run("Treatment Flyer Send", send_flyers, hours=2)
+# )
+
+schedule.every().day.at("09:00").do(
+    lambda: _safe_run("CRM Sync (SM8 → GHL)", crm_sync)
+)
+
+schedule.every(30).minutes.do(
+    lambda: _safe_run("Meta Ads Lead Sync", meta_lead_sync)
 )
 
 
@@ -94,9 +107,10 @@ def main() -> None:
                 _melbourne_time())
     logger.info("Pending jobs: %d", len(schedule.jobs))
 
-    # Run auto-responder and flyer check immediately on startup
+    # Run auto-responder on startup
     _safe_run("Email Auto-Responder (startup)", auto_responder)
-    _safe_run("Treatment Flyer Send (startup)", send_flyers, hours=24)
+    # Flyer check disabled for now
+    # _safe_run("Treatment Flyer Send (startup)", send_flyers, hours=24)
 
     while True:
         schedule.run_pending()

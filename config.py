@@ -5,7 +5,7 @@ load_dotenv()
 
 # --- API Keys ---
 SM8_API_KEY = os.environ["Sm8"]
-SQUARE_API_KEY = os.environ["Square"]
+SQUARE_API_KEY = os.environ.get("Square", "")
 GORILLADESK_API_KEY = os.environ.get("Gorilladesk", "")
 QUICKBOOKS_API_KEY = os.environ.get("Quickbooks", "")
 GOHIGHLEVEL_API_KEY = os.environ.get("Gohighlevel", "")
@@ -15,6 +15,12 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1")
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
+MANUS_API_KEY = os.environ.get("MANUS_API_KEY", "")
+MANUS_API_BASE = os.environ.get("MANUS_API_BASE", "https://api.manus.ai/v1")
+MANUS_AGENT_ID = os.environ.get("MANUS_AGENT_ID", "")
+META_ADS_TOKEN = os.environ.get("META_ADS_TOKEN", "")
+META_AD_ACCOUNT_ID = os.environ.get("META_AD_ACCOUNT_ID", "")
 
 # --- ServiceM8 ---
 SM8_BASE_URL = "https://api.servicem8.com/api_1.0"
