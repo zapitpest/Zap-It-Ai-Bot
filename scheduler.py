@@ -9,6 +9,7 @@ Automation schedule:
   Google Sheet SM8 Sync      8:00 PM Mon/Wed/Fri   (cron: 0 20 * * 1,3,5)
   Treatment Flyer Send       Every hour (after SM8) (interval: 3600s, offset 30m)
   CRM Sync (SM8 → GHL)       9:00 AM daily        (cron: 0 9 * * *)
+  Meta Ads Lead Sync         Every 30 minutes     (interval: 1800s)
 
 All times are Melbourne local time (Australia/Melbourne).
 """
@@ -27,6 +28,7 @@ from automations.google_sheet_sm8_sync import run as sheet_sm8_sync
 from automations.email_auto_responder import run as auto_responder
 from automations.unresponded_email_followup import run as followup_check
 from automations.crm_sync import run as crm_sync
+from automations.meta_lead_sync import run as meta_lead_sync
 from send_flyers import run as send_flyers
 
 logging.basicConfig(
@@ -92,6 +94,10 @@ schedule.every(1).hours.do(
 
 schedule.every().day.at("09:00").do(
     lambda: _safe_run("CRM Sync (SM8 → GHL)", crm_sync)
+)
+
+schedule.every(30).minutes.do(
+    lambda: _safe_run("Meta Ads Lead Sync", meta_lead_sync)
 )
 
 

@@ -4,6 +4,7 @@ manus_prefs.json
 .qb_tokens.json
 .google_token.json
 google_credentials.json
+meta_leads_seen.json
 __pycache__/
 *.pyc
 *.pyo
