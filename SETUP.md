@@ -58,6 +58,46 @@ Done. The bot now runs 7 automations automatically:
 
 ---
 
+## Deploying to DigitalOcean (Ubuntu Server)
+
+### Step 1 — SSH into your droplet
+Open a terminal and run:
+```bash
+ssh root@YOUR_DROPLET_IP
+```
+(Find the IP in your DigitalOcean dashboard)
+
+### Step 2 — One-command deploy
+Paste this single command into the server:
+```bash
+bash <(curl -sL https://raw.githubusercontent.com/zapitpest/zap-it-ai-bot/main/deploy.sh)
+```
+
+The script will:
+1. Install Python and Git
+2. Download Zap Bot
+3. Install all Python packages
+4. Create your `.env` file from the template
+5. Set up the bot as a system service (auto-starts on reboot)
+
+### Step 3 — Fill in your API keys
+After the first run it will pause and ask you to edit `.env`:
+```bash
+nano /opt/zapbot/.env
+```
+Paste in all your keys, save (`Ctrl+X` → `Y` → `Enter`), then run the deploy script once more:
+```bash
+bash /opt/zapbot/deploy.sh
+```
+
+### Step 4 — Verify it's running
+```bash
+systemctl status zapbot
+journalctl -u zapbot -f    # live logs
+```
+
+---
+
 ## Troubleshooting
 
 ### Gmail not working?

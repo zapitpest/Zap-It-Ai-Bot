@@ -5,7 +5,7 @@ load_dotenv()
 
 # --- API Keys ---
 SM8_API_KEY = os.environ["Sm8"]
-SQUARE_API_KEY = os.environ["Square"]
+SQUARE_API_KEY = os.environ.get("Square", "")
 GORILLADESK_API_KEY = os.environ.get("Gorilladesk", "")
 QUICKBOOKS_API_KEY = os.environ.get("Quickbooks", "")
 GOHIGHLEVEL_API_KEY = os.environ.get("Gohighlevel", "")
