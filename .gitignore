@@ -1,5 +1,26 @@
+# Secrets — never commit
 .env
+*.env
+.env.*
+
+# Generated media — never commit
+*.mp4
+*.mp3
+*.wav
+*.mov
+
+# Runtime / approval files — never commit
+approval_queue.json
+meta_draft_live.json
+flyers_sent.json
+followup_sent.json
+responded_threads.json
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
+
+# OS
 .DS_Store
+Thumbs.db

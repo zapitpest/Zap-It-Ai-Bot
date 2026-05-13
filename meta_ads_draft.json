@@ -1,0 +1,160 @@
+{
+  "_comment": "DRY_RUN ONLY — no live Meta actions until human approval. See approve_and_launch.py.",
+  "_dry_run": true,
+  "_status": "AWAITING_HUMAN_APPROVAL",
+  "_generated_at": "2026-05-13",
+  "_ad_account": "act_61588715705652",
+  "_video_16x9_job": "762375a0-9722-4425-b506-4c343e085fdb",
+  "_video_9x16_job": "27f7adec-5c52-46c4-96a1-cf2adf90587d",
+
+  "campaign": {
+    "name": "Zap It Pest Control — Melbourne Leads [DRAFT]",
+    "objective": "OUTCOME_LEADS",
+    "status": "PAUSED",
+    "special_ad_categories": [],
+    "budget_rebalance_flag": false,
+    "_note": "PAUSED on creation. Must be manually set to ACTIVE after approval."
+  },
+
+  "ad_set": {
+    "name": "Melbourne Homeowners 25–55 — Leads",
+    "campaign_ref": "campaign.name",
+    "daily_budget_cents": 1000,
+    "billing_event": "IMPRESSIONS",
+    "optimization_goal": "LEAD_GENERATION",
+    "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+    "status": "PAUSED",
+    "targeting": {
+      "geo_locations": {
+        "cities": [
+          {"key": "2151849", "name": "Melbourne", "region": "Victoria", "country": "AU"}
+        ],
+        "location_types": ["home", "recent"]
+      },
+      "age_min": 25,
+      "age_max": 55,
+      "genders": [1, 2],
+      "flexible_spec": [
+        {
+          "interests": [
+            {"id": "6003348909735", "name": "Home improvement"},
+            {"id": "6003474604339", "name": "Real estate"},
+            {"id": "6002966099476", "name": "Home ownership"},
+            {"id": "6003409936152", "name": "Homeowner"}
+          ]
+        },
+        {
+          "behaviors": [
+            {"id": "6015559485583", "name": "Homeowners"}
+          ]
+        }
+      ],
+      "publisher_platforms": ["facebook", "instagram", "audience_network"],
+      "facebook_positions": ["feed", "reels", "story"],
+      "instagram_positions": ["stream", "reels", "story"]
+    }
+  },
+
+  "lead_gen_form": {
+    "name": "Zap It — Free Pest Inspection Request",
+    "locale": "en_AU",
+    "questions": [
+      {"type": "FULL_NAME"},
+      {"type": "EMAIL"},
+      {"type": "PHONE"},
+      {
+        "type": "CUSTOM",
+        "label": "What pest are you dealing with?",
+        "options": [
+          {"value": "termites", "key": "Termites"},
+          {"value": "cockroaches", "key": "Cockroaches"},
+          {"value": "rodents", "key": "Rodents / Mice"},
+          {"value": "spiders", "key": "Spiders"},
+          {"value": "ants", "key": "Ants"},
+          {"value": "other", "key": "Other / Not sure"}
+        ]
+      },
+      {
+        "type": "CUSTOM",
+        "label": "Best time to call?",
+        "options": [
+          {"value": "morning", "key": "Morning (8am – 12pm)"},
+          {"value": "afternoon", "key": "Afternoon (12pm – 5pm)"},
+          {"value": "evening", "key": "Evening (5pm – 7pm)"}
+        ]
+      }
+    ],
+    "privacy_policy": {
+      "url": "https://www.zapitpestmelbourne.com.au/privacy-policy",
+      "link_text": "Privacy Policy"
+    },
+    "thank_you_page": {
+      "title": "Thanks! We'll be in touch shortly.",
+      "body": "Our Zap It team will call you to confirm your free inspection. Pest protection you can trust.",
+      "cta_type": "VIEW_WEBSITE",
+      "cta_link": "https://www.zapitpestmelbourne.com.au"
+    }
+  },
+
+  "ad_creative_16x9": {
+    "name": "Zap It TV Spot 16:9 — Feed Creative",
+    "format": "VIDEO",
+    "aspect_ratio": "16:9",
+    "placement": "Facebook Feed",
+    "video_source": "higgsfield_job:762375a0-9722-4425-b506-4c343e085fdb",
+    "voiceover_source": "voiceover_zapit.mp3",
+    "page_message": "🏡 Pests in your Melbourne home? Zap It gets rid of them fast — safely and with minimal disruption to your family.\n\n✅ Child-safe & pet-safe treatments\n✅ DHHS licensed & fully insured\n✅ Same-day service available\n✅ 5-star rated Melbourne pest control\n\nBook your FREE inspection today 👇",
+    "call_to_action": {
+      "type": "SIGN_UP",
+      "destination": "lead_gen_form"
+    },
+    "on_screen_text": [
+      "Seen signs of pests?",
+      "Fast. Safe. Professional.",
+      "Melbourne pest control you can trust.",
+      "Book your inspection today",
+      "zapitpestmelbourne.com.au",
+      "Call 9126 0555"
+    ]
+  },
+
+  "ad_creative_9x16": {
+    "name": "Zap It TV Spot 9:16 — Reels/Stories Creative",
+    "format": "VIDEO",
+    "aspect_ratio": "9:16",
+    "placement": "Instagram Reels, Instagram Stories, Facebook Stories",
+    "video_source": "higgsfield_job:27f7adec-5c52-46c4-96a1-cf2adf90587d",
+    "voiceover_source": "voiceover_zapit.mp3",
+    "page_message": "🏡 Pests in your Melbourne home? Zap It gets rid of them fast — safely and with minimal disruption to your family.\n\n✅ Child-safe & pet-safe treatments\n✅ DHHS licensed & fully insured\n✅ Same-day service available\n\nBook your FREE inspection today 👇",
+    "call_to_action": {
+      "type": "SIGN_UP",
+      "destination": "lead_gen_form"
+    }
+  },
+
+  "ads": [
+    {
+      "name": "Zap It — 16:9 Feed Ad",
+      "ad_set_ref": "ad_set.name",
+      "creative_ref": "ad_creative_16x9.name",
+      "status": "PAUSED"
+    },
+    {
+      "name": "Zap It — 9:16 Reels/Stories Ad",
+      "ad_set_ref": "ad_set.name",
+      "creative_ref": "ad_creative_9x16.name",
+      "status": "PAUSED"
+    }
+  ],
+
+  "approval_checklist": {
+    "video_16x9_reviewed": false,
+    "video_9x16_reviewed": false,
+    "voiceover_reviewed": false,
+    "ad_copy_approved": false,
+    "lead_form_approved": false,
+    "budget_confirmed": false,
+    "targeting_confirmed": false,
+    "human_approved": false
+  }
+}
