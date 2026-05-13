@@ -28,7 +28,7 @@ AD_ACCOUNT_ID = os.getenv("META_AD_ACCOUNT_ID", "act_61588715705652")
 API_BASE = "https://graph.facebook.com/v19.0"
 
 # ── Video source (replace VIDEO_URL with the final Higgsfield URL once ready) ──
-VIDEO_URL = "PASTE_VIDEO_URL_HERE"
+VIDEO_URL = "https://d8j0ntlcm91z4.cloudfront.net/user_3DYJhowAyXLJOzoNb6vzvdH3Dzq/hf_20260513_081629_aec1f981-425c-4a6c-9009-16283a0fbd51.mp4"
 VIDEO_FILE = "zapit_ad_final.mp4"
 VIDEO_FILE_CLEAN = "zapit_ad_no_music.mp4"
 
