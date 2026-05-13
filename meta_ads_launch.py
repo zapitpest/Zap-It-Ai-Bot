@@ -31,6 +31,8 @@ API_BASE = "https://graph.facebook.com/v19.0"
 VIDEO_URL = "https://d8j0ntlcm91z4.cloudfront.net/user_3DYJhowAyXLJOzoNb6vzvdH3Dzq/hf_20260513_081629_aec1f981-425c-4a6c-9009-16283a0fbd51.mp4"
 VIDEO_FILE = "zapit_ad_final.mp4"
 VIDEO_FILE_CLEAN = "zapit_ad_no_music.mp4"
+VIDEO_FILE_VO = "zapit_ad_with_voiceover.mp4"
+VOICEOVER_URL = "https://raw.githubusercontent.com/zapitpest/Zap-It-Ai-Bot/claude/pest-control-ad-1xd8a/zapit_voiceover.mp3"
 
 # ── Campaign settings ───────────────────────────────────────────────────────────
 CAMPAIGN_NAME = "Zapit Pest Protection — Melbourne Leads"
@@ -70,24 +72,41 @@ def download_video():
     log(f"Saved → {VIDEO_FILE}")
 
 
-# ── Step 2: Strip music, keep ambient audio ─────────────────────────────────────
-def strip_music():
-    log("Stripping music track (keeping ambient audio)…")
-    # Uses ffmpeg to remove music — keeps natural ambient/sync sound
-    # If the video has no separate music track this is a no-op passthrough
+# ── Step 2: Download voiceover MP3 ─────────────────────────────────────────────
+def download_voiceover():
+    if os.path.exists("zapit_voiceover.mp3"):
+        log("Voiceover already present locally → zapit_voiceover.mp3")
+        return
+    log("Downloading voiceover from repo…")
+    r = requests.get(VOICEOVER_URL)
+    with open("zapit_voiceover.mp3", "wb") as f:
+        f.write(r.content)
+    log("Voiceover saved → zapit_voiceover.mp3")
+
+
+# ── Step 3: Merge voiceover onto video (ambient audio kept at low vol) ──────────
+def merge_voiceover():
+    log("Merging voiceover with video…")
     result = subprocess.run([
-        "ffmpeg", "-y", "-i", VIDEO_FILE,
-        "-af", "highpass=f=200,lowpass=f=3000",  # pass only voice/ambient range
+        "ffmpeg", "-y",
+        "-i", VIDEO_FILE,
+        "-i", "zapit_voiceover.mp3",
+        "-filter_complex",
+        "[0:a]volume=0.15[ambient];[1:a]volume=1.0[vo];[ambient][vo]amix=inputs=2:duration=first[aout]",
+        "-map", "0:v",
+        "-map", "[aout]",
         "-c:v", "copy",
-        VIDEO_FILE_CLEAN
+        "-c:a", "aac",
+        "-shortest",
+        VIDEO_FILE_VO
     ], capture_output=True, text=True)
 
     if result.returncode != 0:
-        log("ffmpeg not available — using original file as-is")
+        log(f"ffmpeg merge failed: {result.stderr[-300:]}")
         import shutil
-        shutil.copy(VIDEO_FILE, VIDEO_FILE_CLEAN)
+        shutil.copy(VIDEO_FILE, VIDEO_FILE_VO)
     else:
-        log(f"Clean audio saved → {VIDEO_FILE_CLEAN}")
+        log(f"Final video with voiceover → {VIDEO_FILE_VO}")
 
 
 # ── Step 3: Get Facebook Page ID ────────────────────────────────────────────────
@@ -107,7 +126,7 @@ def get_page_id():
 def upload_video(page_id, page_token):
     log("Uploading video to Meta…")
     url = f"{API_BASE}/{AD_ACCOUNT_ID}/advideos"
-    with open(VIDEO_FILE_CLEAN, "rb") as f:
+    with open(VIDEO_FILE_VO, "rb") as f:
         resp = requests.post(
             url,
             params={"access_token": META_TOKEN},
@@ -283,7 +302,8 @@ if __name__ == "__main__":
     print("=" * 55)
 
     download_video()
-    strip_music()
+    download_voiceover()
+    merge_voiceover()
 
     page_id, page_token = get_page_id()
     video_id   = upload_video(page_id, page_token)
