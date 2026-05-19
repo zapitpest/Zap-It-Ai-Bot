@@ -7,8 +7,11 @@
   "_video_16x9_job": "762375a0-9722-4425-b506-4c343e085fdb",
   "_video_9x16_job": "27f7adec-5c52-46c4-96a1-cf2adf90587d",
   "_video_9x16_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3DYJhowAyXLJOzoNb6vzvdH3Dzq/hf_20260513_130058_27f7adec-5c52-46c4-96a1-cf2adf90587d.mp4",
+  "_video_16x9_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3DYJhowAyXLJOzoNb6vzvdH3Dzq/hf_20260513_130040_762375a0-9722-4425-b506-4c343e085fdb.mp4",
   "_video_9x16_status": "completed",
-  "_video_16x9_status": "in_progress",
+  "_video_16x9_status": "completed",
+  "_video_voiceover_job": "980dc14f-6e6c-4856-acfa-af784b58b93a",
+  "_video_voiceover_status": "queued",
 
   "campaign": {
     "name": "Zap It Pest Control — Melbourne Leads [DRAFT]",
